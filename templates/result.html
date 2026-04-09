@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Kết quả Deploy</title>
+</head>
+<body>
+    <h1>Kết quả Deploy</h1>
+
+    <table border="1" cellpadding="8">
+        <tr>
+            <th>Router</th>
+            <th>IP</th>
+            <th>Trạng thái</th>
+            <th>Chi tiết</th>
+        </tr>
+
+        {% for item in results %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.ip }}</td>
+            <td>{{ item.status }}</td>
+            <td><pre>{{ item.detail }}</pre></td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <br>
+    <a href="/">Về trang chủ</a>
+</body>
+</html>

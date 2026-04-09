@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Network Automation</title>
+</head>
+<body>
+    <h1>Network Automation Dashboard</h1>
+
+    <h2>Thêm Router</h2>
+    <form action="/add_router" method="post">
+        <label>Tên router:</label><br>
+        <input type="text" name="name" required><br><br>
+
+        <label>IP quản trị:</label><br>
+        <input type="text" name="ip" required><br><br>
+
+        <label>Device type:</label><br>
+        <input type="text" name="device_type" value="cisco_ios" required><br><br>
+
+        <label>Username:</label><br>
+        <input type="text" name="username" value="admin" required><br><br>
+
+        <label>Password:</label><br>
+        <input type="password" name="password" value="admin123" required><br><br>
+
+        <label>Loopback IP cần deploy:</label><br>
+        <input type="text" name="loopback_ip" placeholder="10.10.10.1" required><br><br>
+
+        <button type="submit">Thêm Router</button>
+    </form>
+
+    <hr>
+
+    <h2>Danh sách Router</h2>
+    <table border="1" cellpadding="8">
+        <tr>
+            <th>Name</th>
+            <th>IP</th>
+            <th>Device Type</th>
+            <th>Username</th>
+            <th>Loopback IP</th>
+        </tr>
+        {% for router in routers %}
+        <tr>
+            <td>{{ router.name }}</td>
+            <td>{{ router.ip }}</td>
+            <td>{{ router.device_type }}</td>
+            <td>{{ router.username }}</td>
+            <td>{{ router.loopback_ip }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <br>
+    <a href="/deploy">Deploy Config</a>
+</body>
+</html>

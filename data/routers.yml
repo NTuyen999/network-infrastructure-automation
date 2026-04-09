@@ -1,0 +1,18 @@
+routers:
+  - name: R1
+    ip: 192.168.83.100
+    device_type: cisco_ios
+    username: admin
+    password: admin123
+
+  - name: R2
+    ip: 192.168.19.11
+    device_type: cisco_ios
+    username: admin
+    password: admin123
+
+  - name: R3
+    ip: 192.168.19.12
+    device_type: cisco_ios
+    username: admin
+    password: admin123
