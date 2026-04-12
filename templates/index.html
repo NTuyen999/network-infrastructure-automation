@@ -2,57 +2,525 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Network Automation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Infrastructure Automation</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f7fb;
+            color: #1f2937;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1d4ed8, #2563eb, #3b82f6);
+            color: white;
+            padding: 36px 20px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
+        }
+
+        .header h1 {
+            margin: 0 0 10px;
+            font-size: 34px;
+        }
+
+        .header p {
+            margin: 0;
+            font-size: 16px;
+            opacity: 0.95;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 24px 16px 40px;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: -28px;
+            margin-bottom: 28px;
+        }
+
+        .menu-card {
+            position: relative;
+            overflow: hidden;
+            display: block;
+            text-decoration: none;
+            color: white;
+            border-radius: 18px;
+            padding: 26px 20px;
+            font-size: 22px;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+            transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+        }
+
+        .menu-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -130%;
+            width: 70%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.18);
+            transform: skewX(-25deg);
+            transition: left 0.45s ease;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 18px 32px rgba(0, 0, 0, 0.2);
+            filter: brightness(1.06);
+        }
+
+        .menu-card:hover::before {
+            left: 140%;
+        }
+
+        .menu-card:active {
+            transform: translateY(-2px) scale(0.99);
+        }
+
+        .btn-vlan {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        }
+
+        .btn-ospf {
+            background: linear-gradient(135deg, #0f766e, #0d9488);
+        }
+
+        .btn-security {
+            background: linear-gradient(135deg, #b45309, #d97706);
+        }
+
+        .btn-backup {
+            background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+        }
+
+        .section {
+            background: white;
+            border-radius: 18px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+        }
+
+        .section h2 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 28px;
+            color: #111827;
+        }
+
+        .section p.note {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #4b5563;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 14px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        input, select, textarea {
+            padding: 12px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 15px;
+            background: #fff;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        button, .link-button {
+            position: relative;
+            overflow: hidden;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease;
+        }
+
+        button::before, .link-button::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -130%;
+            width: 65%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.18);
+            transform: skewX(-25deg);
+            transition: left 0.4s ease;
+        }
+
+        button:hover, .link-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 18px rgba(0, 0, 0, 0.14);
+            filter: brightness(1.05);
+        }
+
+        button:hover::before, .link-button:hover::before {
+            left: 140%;
+        }
+
+        button:active, .link-button:active {
+            transform: scale(0.97);
+        }
+
+        .primary-btn {
+            background: #2563eb;
+            color: white;
+        }
+
+        .secondary-btn {
+            background: #111827;
+            color: white;
+        }
+
+        .warning-btn {
+            background: #b45309;
+            color: white;
+        }
+
+        .success-btn {
+            background: #0f766e;
+            color: white;
+        }
+
+        .purple-btn {
+            background: #7c3aed;
+            color: white;
+        }
+
+        .router-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        .router-table th,
+        .router-table td {
+            border: 1px solid #e5e7eb;
+            padding: 12px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .router-table th {
+            background: #f3f4f6;
+        }
+
+        .router-table tr:hover td {
+            background: #f9fafb;
+        }
+
+        .result-box {
+            margin-top: 16px;
+            background: #0f172a;
+            color: #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            min-height: 80px;
+            font-family: Consolas, monospace;
+        }
+
+        .small-note {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 10px;
+        }
+
+        .footer-space {
+            height: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 28px;
+            }
+
+            .menu-card {
+                font-size: 20px;
+                padding: 22px 16px;
+            }
+
+            .section {
+                padding: 18px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Network Automation Dashboard</h1>
+    <div class="header">
+        <h1>Network Infrastructure Automation</h1>
+        <p>Giao diện điều khiển các chức năng tự động hóa cấu hình mạng</p>
+    </div>
 
-    <h2>Thêm Router</h2>
-    <form action="/add_router" method="post">
-        <label>Tên router:</label><br>
-        <input type="text" name="name" required><br><br>
+    <div class="container">
+        <div class="menu-grid">
+            <a href="#vlan-section" class="menu-card btn-vlan">📡<br>Triển khai VLAN</a>
+            <a href="#ospf-section" class="menu-card btn-ospf">🧭<br>Cấu hình OSPF</a>
+            <a href="#security-section" class="menu-card btn-security">🔒<br>Áp dụng Security</a>
+            <a href="#backup-section" class="menu-card btn-backup">💾<br>Sao lưu cấu hình</a>
+        </div>
 
-        <label>IP quản trị:</label><br>
-        <input type="text" name="ip" required><br><br>
+        <div class="section">
+            <h2>Quản lý thiết bị</h2>
+            <p class="note">Khu này dùng để thêm router/switch vào danh sách quản lý của hệ thống.</p>
 
-        <label>Device type:</label><br>
-        <input type="text" name="device_type" value="cisco_ios" required><br><br>
+            <form action="/add_router" method="POST">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="name">Tên thiết bị</label>
+                        <input type="text" id="name" name="name" placeholder="R1 / Core1 / SW1" required>
+                    </div>
 
-        <label>Username:</label><br>
-        <input type="text" name="username" value="admin" required><br><br>
+                    <div class="form-group">
+                        <label for="ip">Địa chỉ IP</label>
+                        <input type="text" id="ip" name="ip" placeholder="192.168.56.101" required>
+                    </div>
 
-        <label>Password:</label><br>
-        <input type="password" name="password" value="admin123" required><br><br>
+                    <div class="form-group">
+                        <label for="device_type">Loại thiết bị</label>
+                        <input type="text" id="device_type" name="device_type" placeholder="cisco_ios" required>
+                    </div>
 
-        <label>Loopback IP cần deploy:</label><br>
-        <input type="text" name="loopback_ip" placeholder="10.10.10.1" required><br><br>
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" placeholder="admin" required>
+                    </div>
 
-        <button type="submit">Thêm Router</button>
-    </form>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" placeholder="cisco" required>
+                    </div>
 
-    <hr>
+                    <div class="form-group">
+                        <label for="loopback_ip">Loopback IP</label>
+                        <input type="text" id="loopback_ip" name="loopback_ip" placeholder="1.1.1.1" required>
+                    </div>
+                </div>
 
-    <h2>Danh sách Router</h2>
-    <table border="1" cellpadding="8">
-        <tr>
-            <th>Name</th>
-            <th>IP</th>
-            <th>Device Type</th>
-            <th>Username</th>
-            <th>Loopback IP</th>
-        </tr>
-        {% for router in routers %}
-        <tr>
-            <td>{{ router.name }}</td>
-            <td>{{ router.ip }}</td>
-            <td>{{ router.device_type }}</td>
-            <td>{{ router.username }}</td>
-            <td>{{ router.loopback_ip }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+                <div class="action-row">
+                    <button type="submit" class="primary-btn">Thêm thiết bị</button>
+                    <a href="/deploy" class="link-button secondary-btn">Triển khai cấu hình Loopback</a>
+                </div>
+            </form>
 
-    <br>
-    <a href="/deploy">Deploy Config</a>
+            <table class="router-table">
+                <thead>
+                    <tr>
+                        <th>Tên</th>
+                        <th>IP</th>
+                        <th>Device Type</th>
+                        <th>Username</th>
+                        <th>Loopback</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if routers %}
+                        {% for router in routers %}
+                        <tr>
+                            <td>{{ router.name }}</td>
+                            <td>{{ router.ip }}</td>
+                            <td>{{ router.device_type }}</td>
+                            <td>{{ router.username }}</td>
+                            <td>{{ router.loopback_ip }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5">Chưa có thiết bị nào trong danh sách.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <div id="vlan-section" class="section">
+            <h2>Triển khai VLAN</h2>
+            <p class="note">Khu vực dành cho các chức năng như Access Port, Trunking, EtherChannel, L2 Core.</p>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Tên chức năng VLAN</label>
+                    <input type="text" value="Access Port / Trunk / EtherChannel" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label>Thiết bị mục tiêu</label>
+                    <input type="text" placeholder="Core1 / SW1 / Core Pair">
+                </div>
+
+                <div class="form-group">
+                    <label>Mô tả</label>
+                    <input type="text" placeholder="Cấu hình Access Port hoặc L2 Core">
+                </div>
+            </div>
+
+            <div class="action-row">
+                <button class="primary-btn" type="button">Cấu hình Access Port</button>
+                <button class="success-btn" type="button">Cấu hình L2 Core</button>
+            </div>
+
+            <div class="small-note">
+                Bạn có thể nối 2 nút này với API hiện có như <code>/api/access-port</code> và <code>/api/l2-core</code>.
+            </div>
+        </div>
+
+        <div id="ospf-section" class="section">
+            <h2>Cấu hình OSPF</h2>
+            <p class="note">Khu vực để triển khai cấu hình định tuyến động OSPF cho router.</p>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Router</label>
+                    <input type="text" placeholder="R1 / R2 / R3">
+                </div>
+
+                <div class="form-group">
+                    <label>Process ID</label>
+                    <input type="number" placeholder="1">
+                </div>
+
+                <div class="form-group">
+                    <label>Area</label>
+                    <input type="number" placeholder="0">
+                </div>
+
+                <div class="form-group full-width">
+                    <label>Network statements</label>
+                    <textarea placeholder="Ví dụ:
+network 192.168.10.0 0.0.0.255 area 0
+network 10.10.10.0 0.0.0.3 area 0"></textarea>
+                </div>
+            </div>
+
+            <div class="action-row">
+                <button class="success-btn" type="button">Triển khai OSPF</button>
+            </div>
+        </div>
+
+        <div id="security-section" class="section">
+            <h2>Áp dụng Security</h2>
+            <p class="note">Khu vực để áp ACL, NAT, hoặc các chính sách bảo mật biên mạng.</p>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Thiết bị</label>
+                    <input type="text" placeholder="R1 / Core Switch">
+                </div>
+
+                <div class="form-group">
+                    <label>Nhóm chức năng</label>
+                    <select>
+                        <option>ACL Guest chặn Dev</option>
+                        <option>NAT LAN ra Internet</option>
+                        <option>Security khác</option>
+                    </select>
+                </div>
+
+                <div class="form-group full-width">
+                    <label>Mô tả rule</label>
+                    <textarea placeholder="Ví dụ:
+- Chặn VLAN 30 ping sang VLAN 20
+- NAT cho LAN 192.168.10.0/24 ra Internet qua G0/1"></textarea>
+                </div>
+            </div>
+
+            <div class="action-row">
+                <button class="warning-btn" type="button">Áp ACL</button>
+                <button class="secondary-btn" type="button">Cấu hình NAT</button>
+            </div>
+        </div>
+
+        <div id="backup-section" class="section">
+            <h2>Sao lưu cấu hình</h2>
+            <p class="note">Khu vực dùng để sao lưu running-config hoặc startup-config của thiết bị.</p>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Tên thiết bị</label>
+                    <input type="text" placeholder="R1 / Core1 / SW1">
+                </div>
+
+                <div class="form-group">
+                    <label>Loại sao lưu</label>
+                    <select>
+                        <option>Running Config</option>
+                        <option>Startup Config</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Thư mục lưu</label>
+                    <input type="text" placeholder="backup/">
+                </div>
+            </div>
+
+            <div class="action-row">
+                <button class="purple-btn" type="button">Sao lưu cấu hình</button>
+            </div>
+
+            <div class="result-box">Kết quả backup sẽ hiển thị ở đây khi bạn nối chức năng backend.</div>
+        </div>
+
+        <div class="footer-space"></div>
+    </div>
 </body>
 </html>
