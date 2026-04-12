@@ -5,3 +5,9 @@ routers:
   username: admin
   password: admin123
   loopback_ip: 10.10.10.1
+- name: r1
+  ip: 192.168.83.100
+  device_type: cisco_ios
+  username: admin
+  password: admin123
+  loopback_ip: 10.10.10.1

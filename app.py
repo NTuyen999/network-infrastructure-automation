@@ -3,6 +3,7 @@ import yaml
 import os
 
 from automation.deploy_config import deploy_config
+from api.routes import api_bp
 
 app = Flask(__name__)
 
@@ -30,6 +31,10 @@ def save_routers(data):
         yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
 
 
+# đăng ký blueprint API
+app.register_blueprint(api_bp, url_prefix="/api")
+
+
 @app.route("/")
 def index():
     data = load_routers()
@@ -53,6 +58,7 @@ def add_router():
     save_routers(data)
 
     return redirect(url_for("index"))
+
 
 @app.route("/deploy")
 def deploy():
