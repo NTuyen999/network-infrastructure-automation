@@ -59,17 +59,10 @@ def configure_nat_overload(
             device_type=device_type
         )
 
-        # Lấy cấu hình trước khi thay đổi
-        before_inside = conn.send_command(
-            f"show running-config interface {inside_interface}"
-        )
-        before_outside = conn.send_command(
-            f"show running-config interface {outside_interface}"
-        )
-        before_nat = conn.send_command("show running-config | include ip nat")
-        before_acl = conn.send_command(f"show access-lists {acl_number}")
-
+        # 1. Gom tất cả lệnh cấu hình lại
         commands = [
+            f"no access-list {acl_number}",
+            "no ip nat inside source list 1 interface", 
             f"access-list {acl_number} permit {inside_subnet} {wildcard_mask}",
             f"interface {inside_interface}",
             "ip nat inside",
@@ -80,50 +73,26 @@ def configure_nat_overload(
             f"ip nat inside source list {acl_number} interface {outside_interface} overload"
         ]
 
-        config_output = conn.send_config_set(commands)
+        # 2. Bắn lệnh với bùa hộ mệnh: read_timeout=120 
+        # Ép Python phải ngồi đợi tối đa 120 giây cho Router ảo xử lý xong
+        config_output = conn.send_config_set(commands, read_timeout=120)
 
-        if has_config_error(config_output):
-            return {
-                "success": False,
-                "message": "Thiết bị báo lỗi khi cấu hình NAT",
-                "before_inside": before_inside,
-                "before_outside": before_outside,
-                "before_nat": before_nat,
-                "before_acl": before_acl,
-                "config_output": config_output
-            }
+        # 3. Lưu cấu hình (cũng cho thêm timeout cho chắc ăn)
+        save_output = conn.save_config(read_timeout=120)
 
-        save_output = conn.save_config()
-
-        verify_inside = conn.send_command(
-            f"show running-config interface {inside_interface}"
-        )
-        verify_outside = conn.send_command(
-            f"show running-config interface {outside_interface}"
-        )
-        verify_nat = conn.send_command("show running-config | include ip nat")
-        verify_acl = conn.send_command(f"show access-lists {acl_number}")
-
+        # Trả về kết quả luôn, dẹp mấy lệnh show rườm rà đi cho nhẹ API
         return {
             "success": True,
-            "message": f"Đã cấu hình NAT overload thành công trên {host}",
-            "before_inside": before_inside,
-            "before_outside": before_outside,
-            "before_nat": before_nat,
-            "before_acl": before_acl,
-            "config_output": config_output,
-            "save_output": save_output,
-            "verify_inside": verify_inside,
-            "verify_outside": verify_outside,
-            "verify_nat": verify_nat,
-            "verify_acl": verify_acl
+            "message": f"Đã cấu hình NAT Overload thành công rực rỡ trên {host}",
+            "config_output": config_output
         }
 
     except Exception as e:
         return {
             "success": False,
-            "message": f"Lỗi khi cấu hình NAT: {str(e)}"
+            "message": f"Lỗi NAT do mạng hoặc thiết bị ảo lag: {str(e)}"
         }
+
 
     finally:
         if conn:

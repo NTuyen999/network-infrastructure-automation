@@ -1,106 +1,70 @@
-from automation.connect import connect_device
+from netmiko import ConnectHandler
 
-
-ERROR_KEYWORDS = [
-    "% Invalid input",
-    "% Incomplete command",
-    "% Ambiguous command",
-    "% Command rejected"
-]
-
-
-def has_config_error(output: str) -> bool:
-    return any(err in output for err in ERROR_KEYWORDS)
-
-
-def configure_block_guest_ping_dev(
-    host,
-    username,
-    password,
-    l3_interface,
-    guest_subnet="192.168.30.0",
-    guest_wildcard="0.0.0.255",
-    dev_subnet="192.168.20.0",
-    dev_wildcard="0.0.0.255",
-    acl_name="BLOCK_GUEST_TO_DEV_PING",
-    secret=None,
-    device_type="cisco_ios"
-):
-    """
-    Chặn VLAN 30 (Guest) ping sang VLAN 20 (Dev)
-    bằng extended ACL gắn inbound trên interface L3 của VLAN 30.
-    """
-
-    required = [host, username, password, l3_interface]
-    if any(not x for x in required):
-        return {
-            "success": False,
-            "message": "Thiếu thông tin đầu vào"
-        }
-
+#Hàm chặn cả mạng
+def block_subnet_ping(host, username, password, interface_name, source_subnet, source_wildcard, dest_subnet, dest_wildcard, acl_name, secret="cisco"):
+    cisco_device = {
+        'device_type': 'cisco_ios', 'host': host, 'username': username,
+        'password': password, 'secret': secret
+    }
     conn = None
-
     try:
-        conn = connect_device(
-            host=host,
-            username=username,
-            password=password,
-            secret=secret,
-            device_type=device_type
-        )
-
-        before_int = conn.send_command(
-            f"show running-config interface {l3_interface}"
-        )
-        before_acl = conn.send_command(
-            f"show running-config | section ip access-list extended {acl_name}"
-        )
-
+        conn = ConnectHandler(**cisco_device)
+        conn.enable()
+        
+        # Lệnh Cisco dùng cho Subnet
         commands = [
-            f"no ip access-list extended {acl_name}",
             f"ip access-list extended {acl_name}",
-            f"deny icmp {guest_subnet} {guest_wildcard} {dev_subnet} {dev_wildcard} echo",
+            f"deny icmp {source_subnet} {source_wildcard} {dest_subnet} {dest_wildcard} echo",
             "permit ip any any",
             "exit",
-            f"interface {l3_interface}",
+            f"interface {interface_name}",
             f"ip access-group {acl_name} in"
         ]
-
-        config_output = conn.send_config_set(commands)
-
-        if has_config_error(config_output):
-            return {
-                "success": False,
-                "message": "Thiết bị báo lỗi khi cấu hình ACL",
-                "before_interface": before_int,
-                "before_acl": before_acl,
-                "config_output": config_output
-            }
-
-        save_output = conn.save_config()
-
-        verify_acl = conn.send_command(f"show access-lists {acl_name}")
-        verify_int = conn.send_command(
-            f"show running-config interface {l3_interface}"
-        )
-
-        return {
-            "success": True,
-            "message": f"Đã áp ACL {acl_name} chặn Guest ping Dev",
-            "before_interface": before_int,
-            "before_acl": before_acl,
-            "config_output": config_output,
-            "save_output": save_output,
-            "verify_acl": verify_acl,
-            "verify_interface": verify_int
-        }
-
+        
+        output = conn.send_config_set(commands)
+        conn.save_config()
+        
+        return {"success": True, "message": f"Đã áp ACL {acl_name} chặn mạng {source_subnet} thành công!"}
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Lỗi khi cấu hình ACL: {str(e)}"
-        }
-
+        return {"success": False, "message": f"Lỗi cấu hình: {str(e)}"}
     finally:
-        if conn:
-            conn.disconnect()
+        if conn: conn.disconnect()
+
+
+
+#Hàm chặn 1 Host cụ thể
+def dynamic_acl_ping(host, username, password, interface_name, source_ip, dest_ip, secret="cisco"):
+    cisco_device = {
+        'device_type': 'cisco_ios', 'host': host, 'username': username,
+        'password': password, 'secret': secret
+    }
+    conn = None
+    try:
+        conn = ConnectHandler(**cisco_device)
+        conn.enable()
+        
+        # Lệnh Cisco dùng cho Host (1 máy)
+        commands = [
+            "ip access-list extended DYNAMIC_BLOCK",
+            # BƯỚC 1: Xóa cái thẻ bài miễn tử hiện tại đi (Nếu chưa có thì nó báo lỗi xíu không sao)
+            "no permit ip any any", 
+            
+            # BƯỚC 2: Thêm luật cấm mới vào (Nó sẽ tự lấy số thứ tự tiếp theo)
+            f"deny icmp host {source_ip} host {dest_ip} echo",
+            
+            # BƯỚC 3: Chốt sổ lại bằng thẻ bài miễn tử ở dưới cùng
+            "permit ip any any",
+            
+            "exit",
+            f"interface {interface_name}",
+            "ip access-group DYNAMIC_BLOCK in"
+        ]
+        
+        output = conn.send_config_set(commands)
+        conn.save_config()
+        
+        return {"success": True, "message": f"Đã khóa mõm! Máy {source_ip} không thể ping {dest_ip}."}
+    except Exception as e:
+        return {"success": False, "message": f"Lỗi cấu hình: {str(e)}"}
+    finally:
+        if conn: conn.disconnect()

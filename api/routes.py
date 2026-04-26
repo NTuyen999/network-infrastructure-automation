@@ -1,97 +1,86 @@
 from flask import Blueprint, request, jsonify
-from automation.access_port import configure_access_port
-from automation.config_l2_core import configure_l2_core_pair
+from automation.trunking import configure_trunk_port
 from automation.config_security import configure_nat_overload
-from automation.config_acl import configure_block_guest_ping_dev
+from automation.config_acl import dynamic_acl_ping
 
 api_bp = Blueprint("api_bp", __name__)
 
-@api_bp.route("/access-port", methods=["POST"])
-def access_port():
+@api_bp.route("/trunking", methods=["POST"])  # Đổi route thành /trunking cho khớp với HTML
+def api_trunking():
     data = request.get_json()
 
-    result = configure_access_port(
+    # Gọi đúng tên hàm configure_trunk_port và truyền đủ biến
+    result = configure_trunk_port(
         host=data.get("host"),
         username=data.get("username"),
         password=data.get("password"),
+        secret=data.get("secret", "cisco"), # Dự phòng pass mặc định
         interface=data.get("interface"),
-        vlan=data.get("vlan"),
-        secret=data.get("secret")
+        allowed_vlans=data.get("allowed_vlans", "all"),
+        native_vlan=data.get("native_vlan", "1")
     )
 
     return jsonify(result), 200 if result["success"] else 400
 
+# Đừng quên import hàm NAT vào ở phía trên file nha:
+from automation.config_security import configure_nat_overload 
 
-@api_bp.route("/l2-core", methods=["POST"])
-def config_l2_core():
-    data = request.get_json()
-
-    core1 = {
-        "name": data.get("core1_name"),
-        "host": data.get("core1_host"),
-        "username": data.get("core1_username"),
-        "password": data.get("core1_password"),
-        "secret": data.get("core1_secret")
-    }
-
-    core2 = {
-        "name": data.get("core2_name"),
-        "host": data.get("core2_host"),
-        "username": data.get("core2_username"),
-        "password": data.get("core2_password"),
-        "secret": data.get("core2_secret")
-    }
-
-    result = configure_l2_core_pair(
-        core1=core1,
-        core2=core2,
-        port_channel_id=data.get("port_channel_id"),
-        core1_po_members=data.get("core1_po_members"),
-        core2_po_members=data.get("core2_po_members"),
-        allowed_vlans=data.get("allowed_vlans"),
-        native_vlan=data.get("native_vlan"),
-        core1_extra_trunks=data.get("core1_extra_trunks"),
-        core2_extra_trunks=data.get("core2_extra_trunks")
-    )
-
-    return jsonify(result), 200 if result["success"] else 400
-
-
-@api_bp.route("/config-security/nat", methods=["POST"])
+@api_bp.route("/nat", methods=["POST"])
 def config_security_nat():
     data = request.get_json(silent=True) or {}
 
+    # Gọi hàm NAT với các thông số từ Web gửi lên
+    # Tui để mặc định host/user/pass, nếu ông muốn Web nhập thì sửa lại thành data.get("host") nhé
     result = configure_nat_overload(
-        host=data.get("host"),
-        username=data.get("username"),
-        password=data.get("password"),
+        host=data.get("host", "192.168.99.1"),  # IP con R1
+        username=data.get("username", "admin"),
+        password=data.get("password", "cisco"),
+        secret=data.get("secret", "cisco"),
         inside_interface=data.get("inside_interface"),
         outside_interface=data.get("outside_interface"),
-        inside_subnet=data.get("inside_subnet"),
-        wildcard_mask=data.get("wildcard_mask"),
+        # Mấy cái subnet này để mặc định cho mạng 192.168.0.0/16 phổ biến
+        inside_subnet=data.get("inside_subnet", "192.168.0.0"),
+        wildcard_mask=data.get("wildcard_mask", "0.0.255.255"),
         acl_number=data.get("acl_number", 1),
-        secret=data.get("secret"),
         device_type=data.get("device_type", "cisco_ios")
     )
 
     return jsonify(result), 200 if result["success"] else 400
 
+# Route cho nút "Áp ACL" (Chặn nguyên 1 mạng)
 @api_bp.route("/acl/block-guest-ping-dev", methods=["POST"])
 def block_guest_ping_dev():
     data = request.get_json(silent=True) or {}
 
-    result = configure_block_guest_ping_dev(
+    # Gọi hàm block_subnet_ping thay vì dynamic
+    result = block_subnet_ping(
         host=data.get("host"),
         username=data.get("username"),
         password=data.get("password"),
-        secret=data.get("secret"),
-        device_type=data.get("device_type", "cisco_ios"),
-        l3_interface=data.get("l3_interface"),
-        guest_subnet=data.get("guest_subnet", "192.168.30.0"),
-        guest_wildcard=data.get("guest_wildcard", "0.0.0.255"),
-        dev_subnet=data.get("dev_subnet", "192.168.20.0"),
-        dev_wildcard=data.get("dev_wildcard", "0.0.0.255"),
-        acl_name=data.get("acl_name", "BLOCK_GUEST_TO_DEV_PING")
+        secret=data.get("secret", "cisco"),
+        interface_name=data.get("l3_interface"), # Web gửi lên l3_interface, Python nhận interface_name
+        source_subnet=data.get("guest_subnet", "192.168.30.0"),
+        source_wildcard=data.get("guest_wildcard", "0.0.0.255"),
+        dest_subnet=data.get("dev_subnet", "192.168.20.0"),
+        dest_wildcard=data.get("dev_wildcard", "0.0.0.255"),
+        acl_name=data.get("acl_name", "BLOCK_GUEST")
     )
 
+    return jsonify(result), 200 if result["success"] else 400
+
+from automation.backup_config import backup_device_config
+
+@api_bp.route("/backup", methods=["POST"])
+def backup_config():
+    data = request.get_json()
+    
+    # Gọi hàm backup mà anh em mình đã viết ở file automation/backup_config.py
+    result = backup_device_config(
+        host=data.get("host"), # Lấy IP từ Web gửi lên
+        username=data.get("username"),
+        password=data.get("password"),
+        secret=data.get("secret"),
+        device_name=data.get("device_name")
+    )
+    
     return jsonify(result), 200 if result["success"] else 400
