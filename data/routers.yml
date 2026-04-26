@@ -1,18 +1,21 @@
 routers:
-  - name: R1
-    ip: 192.168.83.100
-    device_type: cisco_ios
-    username: admin
-    password: admin123
+  - name: "R1"
+    ip: "192.168.99.1"
+    device_type: "cisco_ios"
+    username: "admin"
+    password: "cisco"
+    loopback_ip: "1.1.1.1"
 
-  - name: R2
-    ip: 192.168.19.11
-    device_type: cisco_ios
-    username: admin
-    password: admin123
+  - name: "L3-SW1"
+    ip: "192.168.99.11"
+    device_type: "cisco_ios"
+    username: "admin"
+    password: "cisco"
+    loopback_ip: "2.2.2.2"
 
-  - name: R3
-    ip: 192.168.19.12
-    device_type: cisco_ios
-    username: admin
-    password: admin123
+  - name: "L3-SW2"
+    ip: "192.168.100.1"
+    device_type: "cisco_ios"
+    username: "admin"
+    password: "cisco"
+    loopback_ip: "3.3.3.3"
