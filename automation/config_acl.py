@@ -42,19 +42,12 @@ def dynamic_acl_ping(host, username, password, interface_name, source_ip, dest_i
     try:
         conn = ConnectHandler(**cisco_device)
         conn.enable()
-        
-        # Lệnh Cisco dùng cho Host (1 máy)
+       
         commands = [
             "ip access-list extended DYNAMIC_BLOCK",
-            # BƯỚC 1: Xóa cái thẻ bài miễn tử hiện tại đi (Nếu chưa có thì nó báo lỗi xíu không sao)
             "no permit ip any any", 
-            
-            # BƯỚC 2: Thêm luật cấm mới vào (Nó sẽ tự lấy số thứ tự tiếp theo)
             f"deny icmp host {source_ip} host {dest_ip} echo",
-            
-            # BƯỚC 3: Chốt sổ lại bằng thẻ bài miễn tử ở dưới cùng
             "permit ip any any",
-            
             "exit",
             f"interface {interface_name}",
             "ip access-group DYNAMIC_BLOCK in"
@@ -63,7 +56,7 @@ def dynamic_acl_ping(host, username, password, interface_name, source_ip, dest_i
         output = conn.send_config_set(commands)
         conn.save_config()
         
-        return {"success": True, "message": f"Đã khóa mõm! Máy {source_ip} không thể ping {dest_ip}."}
+        return {"success": True, "message": f"Máy {source_ip} không thể ping {dest_ip}."}
     except Exception as e:
         return {"success": False, "message": f"Lỗi cấu hình: {str(e)}"}
     finally:

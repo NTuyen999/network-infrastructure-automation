@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify
 import yaml
 import os
 import datetime
-
+from flask import render_template
 from automation.deploy_config import deploy_config
 from api.routes import api_bp
 from automation.connect import connect_device 
@@ -10,7 +10,7 @@ from automation.config_acl import dynamic_acl_ping
 
 app = Flask(__name__)
 
-ROUTERS_FILE = "routers.yml"
+ROUTERS_FILE = "data/routers.yml"
 
 def load_routers():
     if not os.path.exists(ROUTERS_FILE):
@@ -62,52 +62,47 @@ def api_ospf():
         conn = connect_device(data['host'], data['username'], data['password'], data['secret'])
         cmds = [f"router ospf {data['process_id']}"]
         for net in data['networks']:
-            cmds.append(f"network {net} area {data['area']}")
+            cmds.append(net) 
         conn.send_config_set(cmds, delay_factor=2)
         conn.save_config()
         conn.disconnect()
-        return jsonify({"success": True, "message": "Đã cấu hình OSPF thành công!"})
+        
+        return jsonify({"success": True, "message": f"Đã cấu hình OSPF cho {data['host']} thành công!"})
+        
     except Exception as e:
-        return jsonify({"success": False, "message": f"Lỗi Python: {str(e)}"})
+        return jsonify({"success": False, "message": f"Lỗi cấu hình OSPF: {str(e)}"})
 
-
-# Cấu hình Trunking Port (802.1Q)
+# Cấu hình Trunking Port (802.1Q)   
 @app.route('/api/trunking', methods=['POST'])
 def api_trunking():
     data = request.json
     try:
-        # 1. Kết nối vào thiết bị
         conn = connect_device(
             data['host'], 
             data['username'], 
             data['password'], 
             data.get('secret', 'cisco')
         )
-        
-        # 2. Lấy dữ liệu từ Web gửi xuống
+      
         interface = data['interface']
         allowed_vlans = data.get('allowed_vlans', 'all')
         native_vlan = data.get('native_vlan', '1')
 
-        # 3. Lên danh sách lệnh Trunking chuẩn bài
         cmds = [
             f"interface {interface}",
-            "switchport", # Ép cổng thành Layer 2 (Rất cần cho Switch L3)
-            "switchport trunk encapsulation dot1q", # Bùa hộ mệnh: Lệnh bắt buộc trên Switch L3 ảo GNS3
+            "switchport", 
+            "switchport trunk encapsulation dot1q", 
             "switchport mode trunk"
         ]
 
-        # 4. Xử lý phần Allowed VLANs (Danh sách khách VIP)
         if allowed_vlans and str(allowed_vlans).lower() != "all":
             cmds.append(f"switchport trunk allowed vlan {allowed_vlans}")
 
-        # 5. Xử lý phần Native VLAN (Phòng chờ Untagged)
         if native_vlan and str(native_vlan) != "1":
             cmds.append(f"switchport trunk native vlan {native_vlan}")
 
         cmds.append("no shutdown")
 
-        # 6. Đẩy lệnh, lưu và thoát
         conn.send_config_set(cmds)
         conn.save_config()
         conn.disconnect()
@@ -144,21 +139,21 @@ def api_nat():
 def tao_acl_tuy_chon():
     data = request.json
     
-    # Lấy IP do người dùng gõ trên Web
+    ip_thiet_bi = data.get('host')
+    cong_ap_dung = data.get('interface_name')
     ip_nguon = data.get('source_ip') 
     ip_dich = data.get('dest_ip')
-    
-    # Lôi cái hàm ở trên ra chạy
+   
     ket_qua = dynamic_acl_ping(
-        host="192.168.99.11", 
+        host=ip_thiet_bi,          
         username="admin", 
         password="cisco", 
-        interface_name="Vlan30",
+        interface_name=cong_ap_dung, 
         source_ip=ip_nguon, 
         dest_ip=ip_dich
     )
-    
-    return jsonify(ket_qua)
+  
+    return jsonify(ket_qua), 200 if ket_qua.get("success") else 400
 
 # 6. Sao lưu cấu hình
 @app.route('/api/backup', methods=['POST'])

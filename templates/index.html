@@ -129,10 +129,11 @@
             <h2>Cấu hình OSPF</h2>
             <p class="note">Khu vực để triển khai cấu hình định tuyến động OSPF cho router.</p>
             <div class="form-grid">
-                <div class="form-group"><label>Router</label><input type="text" placeholder="R1 / R2 / R3"></div>
-                <div class="form-group"><label>Process ID</label><input type="number" placeholder="1"></div>
-                <div class="form-group"><label>Area</label><input type="number" placeholder="0"></div>
-                <div class="form-group full-width"><label>Network statements</label><textarea placeholder="Ví dụ:&#10;network 192.168.10.0 0.0.0.255 area 0&#10;network 10.10.10.0 0.0.0.3 area 0"></textarea></div>
+                <div class="form-group"><label>IP Thiết bị</label><input type="text" id="ospf-host" placeholder="VD: 10.1.12.2 (R2)"></div>
+                
+                <div class="form-group"><label>Process ID</label><input type="number" id="ospf-pid" placeholder="1"></div>
+                <div class="form-group"><label>Area</label><input type="number" id="ospf-area" placeholder="0"></div>
+                <div class="form-group full-width"><label>Network statements</label><textarea id="ospf-networks" placeholder="Ví dụ:&#10;network 10.0.0.0 0.255.255.255 area 0"></textarea></div>
             </div>
             <div class="action-row"><button class="success-btn" type="button">Triển khai OSPF</button></div>
         </div>
@@ -143,6 +144,17 @@
             <div style="background: #f9fafb; padding: 20px; border-radius: 12px; margin-bottom: 24px;">
                 <h3 style="margin-top: 0; color: #1d4ed8;">🎯 Chặn Ping Tùy Chọn (Dynamic ACL)</h3>
                 <p class="note" style="font-size: 14px;">Chỉ định chính xác cặp máy (Nguồn - Đích) cần chặn Ping.</p>
+                <div class="form-grid" style="margin-bottom: 15px;">
+                    <div class="form-group">
+                        <label>IP Thiết bị (Switch/Router)</label>
+                        <input type="text" id="acl-host-ip" placeholder="VD: 10.1.13.3">
+                    </div>
+                    <div class="form-group">
+                        <label>Cổng áp dụng</label>
+                        <input type="text" id="acl-interface" placeholder="VD: vlan 10">
+                    </div>
+                </div>
+        </div>
                 <div class="form-grid">
                     <div class="form-group"><label>IP Nguồn (Kẻ bị chặn)</label><input type="text" id="acl-source-ip" placeholder="VD: 192.168.30.10"></div>
                     <div class="form-group"><label>IP Đích (Mục tiêu bảo vệ)</label><input type="text" id="acl-dest-ip" placeholder="VD: 192.168.20.5"></div>
@@ -172,7 +184,7 @@
         resultBox.innerText = "⏳ Đang trích xuất cấu hình, vui lòng không tắt trình duyệt...";
         resultBox.style.color = "#facc15";
         const targetDevice = document.querySelector('#backup-section input[placeholder="R1 / Core1 / SW1"]').value || "R1";
-        const payload = { "device_name": targetDevice, "host": targetDevice === "L3-SW1" ? "192.168.99.11" : "192.168.99.1", "username": "admin", "password": "cisco", "secret": "cisco" };
+        const payload = { "device_name": targetDevice, "host": targetDevice === "L3-SW1" ? "10.1.13.3" : "192.168.153.50", "username": "admin", "password": "cisco", "secret": "cisco" };
         try {
             const response = await fetch('/api/backup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const data = await response.json();
@@ -206,33 +218,84 @@
     const btnOSPF = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Triển khai OSPF'));
     if (btnOSPF) {
         btnOSPF.onclick = async function() {
-            alert("⏳ Đang định tuyến OSPF R1...");
-            const payload = { "host": "192.168.99.1", "username": "admin", "password": "cisco", "secret": "cisco", "device_type": "cisco_ios", "process_id": "1", "area": "0", "networks": [ "192.168.99.0 0.0.0.255", "1.1.1.1 0.0.0.0" ] };
+            const targetIp = document.getElementById('ospf-host').value;
+            const networksText = document.getElementById('ospf-networks').value;
+            const pid = document.getElementById('ospf-pid').value || "1";
+            const area = document.getElementById('ospf-area').value || "0";
+
+            if (!targetIp || !networksText) {
+                alert("⚠️ Nhập đủ IP thiết bị và Network Statement nhé!");
+                return;
+            }
+            
+            const networkArray = networksText.split('\n').filter(line => line.trim() !== '');
+
+            alert(`⏳ Đang định tuyến OSPF cho thiết bị ${targetIp}...`);
+            const payload = {
+                "host": targetIp, 
+                "username": "admin",
+                "password": "cisco",
+                "secret": "cisco",
+                "device_type": "cisco_ios",
+                "process_id": pid,
+                "area": area,
+                "networks": networkArray
+            };
+
             try {
-                const response = await fetch('/api/ospf', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const response = await fetch('/api/ospf', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
                 const data = await response.json();
-                if(data.success) alert("✅ OSPF đã học được đường đi toàn mạng.");
+                if(data.success) alert(`✅ Thiết bị ${targetIp} đã học được OSPF.`);
                 else alert("❌ Lỗi OSPF: " + data.message);
             } catch (err) { alert("Lỗi mạng! Kiểm tra lại file app.py xem có route /api/ospf chưa."); }
         };
     }
 
-    const btnCustomAcl = document.getElementById('btn-custom-acl');
-    if (btnCustomAcl) {
-        btnCustomAcl.onclick = async function() {
-            const sourceIp = document.getElementById('acl-source-ip').value;
-            const destIp = document.getElementById('acl-dest-ip').value;
-            if (!sourceIp || !destIp) { alert("⚠️ Lưu ý nhập đủ IP nguồn và IP đích!"); return; }
-            alert(`⏳ Đang ra lệnh chặn thằng ${sourceIp} ping tới thằng ${destIp}...`);
-            const payload = { "source_ip": sourceIp, "dest_ip": destIp };
-            try {
-                const response = await fetch('/api/custom-acl', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                const data = await response.json();
-                if(data.success) alert("✅ " + data.message);
-                else alert("❌ Lỗi cấu hình: " + data.message);
-            } catch (err) { alert("❌ Lỗi mạng! Kiểm tra xem Python app.py có đang chạy không nha."); }
+        const btnCustomAcl = document.getElementById('btn-custom-acl');
+if (btnCustomAcl) {
+    btnCustomAcl.onclick = async function() {
+        
+        const hostIp = document.getElementById('acl-host-ip').value;
+        const interfaceName = document.getElementById('acl-interface').value;
+        const sourceIp = document.getElementById('acl-source-ip').value;
+        const destIp = document.getElementById('acl-dest-ip').value;
+        
+        if (!hostIp || !interfaceName || !sourceIp || !destIp) { 
+            alert("⚠️ Lưu ý: Phải nhập đầy đủ IP Thiết bị, Cổng, IP nguồn và IP đích!"); 
+            return; 
+        }
+        
+        alert(`⏳ Đang kết nối tới ${hostIp} để chặn ${sourceIp} ping tới thằng ${destIp}...`);
+        
+        const payload = { 
+            "host": hostIp,
+            "interface_name": interfaceName,
+            "source_ip": sourceIp, 
+            "dest_ip": destIp 
         };
-    }
+        
+        try {
+            const response = await fetch('/api/custom-acl', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payload) 
+            });
+            const data = await response.json();
+            
+            if(response.ok && data.success) {
+                alert("✅ Thành công: " + data.message);
+            } else {
+                alert("❌ Lỗi cấu hình: " + (data.message || data.error || "Không rõ nguyên nhân"));
+            }
+        } catch (err) { 
+            alert("❌ Lỗi mạng! Kiểm tra xem Python app.py có đang chạy không nha."); 
+        }
+    };
+}
 </script>
 </body>
 </html>
