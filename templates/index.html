@@ -154,7 +154,6 @@
                         <input type="text" id="acl-interface" placeholder="VD: vlan 10">
                     </div>
                 </div>
-        </div>
                 <div class="form-grid">
                     <div class="form-group"><label>IP Nguồn (Kẻ bị chặn)</label><input type="text" id="acl-source-ip" placeholder="VD: 192.168.30.10"></div>
                     <div class="form-group"><label>IP Đích (Mục tiêu bảo vệ)</label><input type="text" id="acl-dest-ip" placeholder="VD: 192.168.20.5"></div>
@@ -174,6 +173,16 @@
             <div class="action-row"><button class="purple-btn" type="button">Sao lưu cấu hình</button></div>
             <div class="result-box">Kết quả backup sẽ hiển thị ở đây khi bạn nối chức năng backend.</div>
         </div>
+
+        <div id="restore-section" class="section">
+            <h2>Khôi phục cấu hình</h2>
+            <p class="note">Khu vực dùng để nạp lại cấu hình từ file backup.</p>
+            <div class="form-grid">
+                <div class="form-group"><label>Tên thiết bị</label><input type="text" id="restore-device-name" placeholder="VD: L3-SW1"></div>
+                <div class="form-group"><label>Tên file Backup</label><input type="text" id="restore-file-name" placeholder="VD: backup/L3-SW1_20260502_1614.txt"></div>
+            </div>
+            <div class="action-row"><button class="warning-btn" onclick="triggerRestore()" type="button">🔄 Khôi phục cấu hình</button></div>
+        </div>
         
         <div class="footer-space"></div>
     </div>
@@ -184,7 +193,7 @@
         resultBox.innerText = "⏳ Đang trích xuất cấu hình, vui lòng không tắt trình duyệt...";
         resultBox.style.color = "#facc15";
         const targetDevice = document.querySelector('#backup-section input[placeholder="R1 / Core1 / SW1"]').value || "R1";
-        const payload = { "device_name": targetDevice, "host": targetDevice === "L3-SW1" ? "10.1.13.3" : "192.168.153.50", "username": "admin", "password": "cisco", "secret": "cisco" };
+        const payload = { "device_name": targetDevice, "host": targetDevice === "L3-SW1" ? "10.1.13.3" : "192.168.153.160", "username": "admin", "password": "cisco", "secret": "cisco" };
         try {
             const response = await fetch('/api/backup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const data = await response.json();
@@ -255,47 +264,72 @@
         };
     }
 
-        const btnCustomAcl = document.getElementById('btn-custom-acl');
-if (btnCustomAcl) {
-    btnCustomAcl.onclick = async function() {
-        
-        const hostIp = document.getElementById('acl-host-ip').value;
-        const interfaceName = document.getElementById('acl-interface').value;
-        const sourceIp = document.getElementById('acl-source-ip').value;
-        const destIp = document.getElementById('acl-dest-ip').value;
-        
-        if (!hostIp || !interfaceName || !sourceIp || !destIp) { 
-            alert("⚠️ Lưu ý: Phải nhập đầy đủ IP Thiết bị, Cổng, IP nguồn và IP đích!"); 
-            return; 
-        }
-        
-        alert(`⏳ Đang kết nối tới ${hostIp} để chặn ${sourceIp} ping tới thằng ${destIp}...`);
-        
-        const payload = { 
-            "host": hostIp,
-            "interface_name": interfaceName,
-            "source_ip": sourceIp, 
-            "dest_ip": destIp 
+    const btnCustomAcl = document.getElementById('btn-custom-acl');
+    if (btnCustomAcl) {
+        btnCustomAcl.onclick = async function() {
+            
+            const hostIp = document.getElementById('acl-host-ip').value;
+            const interfaceName = document.getElementById('acl-interface').value;
+            const sourceIp = document.getElementById('acl-source-ip').value;
+            const destIp = document.getElementById('acl-dest-ip').value;
+            
+            if (!hostIp || !interfaceName || !sourceIp || !destIp) { 
+                alert("⚠️ Lưu ý: Phải nhập đầy đủ IP Thiết bị, Cổng, IP nguồn và IP đích!"); 
+                return; 
+            }
+            
+            alert(`⏳ Đang kết nối tới ${hostIp} để chặn ${sourceIp} ping tới thằng ${destIp}...`);
+            
+            const payload = { 
+                "host": hostIp,
+                "interface_name": interfaceName,
+                "source_ip": sourceIp, 
+                "dest_ip": destIp 
+            };
+            
+            try {
+                const response = await fetch('/api/custom-acl', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload) 
+                });
+                const data = await response.json();
+                
+                if(response.ok && data.success) {
+                    alert("✅ Thành công: " + data.message);
+                } else {
+                    alert("❌ Lỗi cấu hình: " + (data.message || data.error || "Không rõ nguyên nhân"));
+                }
+            } catch (err) { 
+                alert("❌ Lỗi mạng! Kiểm tra xem Python app.py có đang chạy không nha."); 
+            }
         };
-        
+    }
+
+    async function triggerRestore() {
+        const deviceName = document.getElementById('restore-device-name').value;
+        const fileName = document.getElementById('restore-file-name').value;
+        if(!deviceName || !fileName) {
+            alert("Vui lòng nhập đủ tên thiết bị và đường dẫn file!");
+            return;
+        }
+        alert(`⏳ Đang tiến hành khôi phục cấu hình cho ${deviceName} từ file ${fileName}...`);
         try {
-            const response = await fetch('/api/custom-acl', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(payload) 
+            const response = await fetch('/api/restore', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ device_name: deviceName, filename: fileName })
             });
             const data = await response.json();
-            
-            if(response.ok && data.success) {
-                alert("✅ Thành công: " + data.message);
+            if(data.status === 'success' || data.success) {
+                alert("✅ Khôi phục thành công!");
             } else {
-                alert("❌ Lỗi cấu hình: " + (data.message || data.error || "Không rõ nguyên nhân"));
+                alert("❌ Lỗi khôi phục: " + (data.message || data.error));
             }
-        } catch (err) { 
-            alert("❌ Lỗi mạng! Kiểm tra xem Python app.py có đang chạy không nha."); 
+        } catch (error) {
+            alert("❌ Lỗi mạng! Kiểm tra xem Python app.py có đang chạy không.");
         }
-    };
-}
+    }
 </script>
 </body>
 </html>

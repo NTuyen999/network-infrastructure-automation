@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from automation.trunking import configure_trunk_port
 from automation.config_security import configure_nat_overload
 from automation.config_acl import dynamic_acl_ping, block_subnet_ping
+from automation.restore_config import restore_device_config
 
 api_bp = Blueprint("api_bp", __name__)
 
@@ -94,3 +95,38 @@ def api_ospf_route():
     )
     
     return jsonify(result), 200 if result["success"] else 400
+
+from automation.restore_config import restore_device_config
+import yaml
+from flask import request, jsonify
+
+@api_bp.route('/restore', methods=['POST'])
+def restore_config():
+    data = request.json
+    device_name = data.get('device_name')
+    filename = data.get('filename')
+
+    with open('data/routers.yml', 'r') as file:
+        yaml_data = yaml.safe_load(file)
+
+    target_device = None
+    for router in yaml_data.get('routers', []):
+        if router['name'] == device_name:
+            target_device = {
+                'device_type': router['device_type'],
+                'host': router['ip'],
+                'username': router['username'],
+                'password': router['password'],
+                'secret': router['password']
+            }
+            break
+
+    if not target_device:
+        return jsonify({"status": "error", "message": "Không tìm thấy thiết bị trong CSDL!"}), 404
+
+    success, log = restore_device_config(target_device, filename)
+    
+    if success:
+        return jsonify({"status": "success", "message": f"Khôi phục thành công từ file {filename}"})
+    else:
+        return jsonify({"status": "error", "message": log}), 500
